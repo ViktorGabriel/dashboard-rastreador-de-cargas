@@ -3,6 +3,5 @@ node_modules
 out
 .env*.local
 .env
-*.db
-*.db-journal
+*.db*
 .agents
