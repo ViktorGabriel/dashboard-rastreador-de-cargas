@@ -57,3 +57,32 @@ export type WorkoutExercise = typeof workoutExercises.$inferSelect;
 export type NewWorkoutExercise = typeof workoutExercises.$inferInsert;
 export type ExerciseSet = typeof exerciseSets.$inferSelect;
 export type NewExerciseSet = typeof exerciseSets.$inferInsert;
+
+import { relations } from "drizzle-orm";
+
+export const workoutsRelations = relations(workouts, ({ many }) => ({
+  workoutExercises: many(workoutExercises),
+}));
+
+export const exercisesRelations = relations(exercises, ({ many }) => ({
+  workoutExercises: many(workoutExercises),
+}));
+
+export const workoutExercisesRelations = relations(workoutExercises, ({ one, many }) => ({
+  workout: one(workouts, {
+    fields: [workoutExercises.workoutId],
+    references: [workouts.id],
+  }),
+  exercise: one(exercises, {
+    fields: [workoutExercises.exerciseId],
+    references: [exercises.id],
+  }),
+  sets: many(exerciseSets),
+}));
+
+export const exerciseSetsRelations = relations(exerciseSets, ({ one }) => ({
+  workoutExercise: one(workoutExercises, {
+    fields: [exerciseSets.workoutExerciseId],
+    references: [workoutExercises.id],
+  }),
+}));

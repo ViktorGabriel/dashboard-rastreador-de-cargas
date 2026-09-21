@@ -15,10 +15,11 @@ export async function POST(req: Request) {
 
     const result = await parseWorkoutText(text.trim());
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Erro na rota /api/parse-workout:", error);
+    const message = error instanceof Error ? error.message : "Erro interno ao processar o treino.";
     return NextResponse.json(
-      { error: error.message || "Erro interno ao processar o treino." },
+      { error: message },
       { status: 500 }
     );
   }
