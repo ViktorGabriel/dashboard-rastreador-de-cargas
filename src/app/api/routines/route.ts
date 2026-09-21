@@ -167,6 +167,27 @@ export async function PUT(req: Request) {
       return NextResponse.json({ success: true, routines: updatedRoutines });
     }
 
+    // Reordenar exercícios de uma ficha (funciona tanto com drag-and-drop quanto botões subir/descer)
+    if (action === "reorder_exercises") {
+      const { routineId, exerciseIds } = body;
+      if (!routineId || !Array.isArray(exerciseIds)) {
+        return NextResponse.json(
+          { error: "routineId e exerciseIds são obrigatórios." },
+          { status: 400 }
+        );
+      }
+
+      for (let i = 0; i < exerciseIds.length; i++) {
+        db.update(schema.routineExercises)
+          .set({ orderIndex: i })
+          .where(eq(schema.routineExercises.id, Number(exerciseIds[i])))
+          .run();
+      }
+
+      const updatedRoutines = await getActiveRoutines();
+      return NextResponse.json({ success: true, routines: updatedRoutines });
+    }
+
     return NextResponse.json({ error: "Parâmetros inválidos para atualização." }, { status: 400 });
   } catch (error: unknown) {
     const err = error as Error;

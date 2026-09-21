@@ -8,6 +8,8 @@ import {
   Play,
   Trash2,
   ChevronDown,
+  ChevronUp,
+  GripVertical,
   Check,
   X,
   Sparkles,
@@ -245,6 +247,89 @@ export function RoutineSplitManager({ onStartWorkout }: RoutineSplitManagerProps
       }
     } catch (err) {
       console.error("Erro ao remover exercício:", err);
+    }
+  };
+
+  // Reordenar exercício (Subir / Descer para Mobile e PC)
+  const handleMoveExercise = async (
+    routineId: number,
+    currentIndex: number,
+    direction: "up" | "down"
+  ) => {
+    const targetRoutine = routines.find((r) => r.id === routineId);
+    if (!targetRoutine) return;
+
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= targetRoutine.exercises.length) return;
+
+    // Reordenação otimista imediata
+    const updatedExercises = [...targetRoutine.exercises];
+    const [movedItem] = updatedExercises.splice(currentIndex, 1);
+    updatedExercises.splice(targetIndex, 0, movedItem);
+
+    const newExerciseIds = updatedExercises.map((ex) => ex.id);
+    setRoutines((prev) =>
+      prev.map((r) => (r.id === routineId ? { ...r, exercises: updatedExercises } : r))
+    );
+
+    try {
+      await fetch("/api/routines", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reorder_exercises",
+          routineId,
+          exerciseIds: newExerciseIds,
+        }),
+      });
+    } catch (err) {
+      console.error("Erro ao persistir nova ordem dos exercícios:", err);
+    }
+  };
+
+  // Drag and Drop (Mouse / Desktop)
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    const activeRoutine = routines.find((r) => r.id === activeTabId);
+    if (draggedIndex === null || draggedIndex === targetIndex || !activeRoutine) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    const updatedExercises = [...activeRoutine.exercises];
+    const [movedItem] = updatedExercises.splice(draggedIndex, 1);
+    updatedExercises.splice(targetIndex, 0, movedItem);
+
+    const newExerciseIds = updatedExercises.map((ex) => ex.id);
+    setRoutines((prev) =>
+      prev.map((r) => (r.id === activeRoutine.id ? { ...r, exercises: updatedExercises } : r))
+    );
+    setDraggedIndex(null);
+
+    try {
+      await fetch("/api/routines", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reorder_exercises",
+          routineId: activeRoutine.id,
+          exerciseIds: newExerciseIds,
+        }),
+      });
+    } catch (err) {
+      console.error("Erro ao persistir ordem via arrasto:", err);
     }
   };
 
@@ -510,33 +595,83 @@ export function RoutineSplitManager({ onStartWorkout }: RoutineSplitManagerProps
 
                 {/* Exercises List in the Current Routine */}
                 <div className="divide-y divide-white/5">
-                  {activeRoutine.exercises.map((ex, idx) => (
-                    <div
-                      key={ex.id}
-                      className="py-3 px-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-white/[0.02] rounded-xl transition"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-slate-500 font-mono text-xs w-5 text-center">
-                          {idx + 1}
-                        </span>
-                        <div className="p-1.5 rounded-lg bg-white/5 text-emerald-400">
-                          <Dumbbell className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-xs font-bold text-white">{ex.exerciseName}</h4>
-                            <span className="badge badge-muscle text-[9px]">
-                              {ex.targetMuscleGroup}
-                            </span>
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
-                              {ex.category === "COMPOUND" ? "Composto" : "Isolador"}
+                  {activeRoutine.exercises.map((ex, idx) => {
+                    const isFirst = idx === 0;
+                    const isLast = idx === activeRoutine.exercises.length - 1;
+                    const isDragging = draggedIndex === idx;
+
+                    return (
+                      <div
+                        key={ex.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, idx)}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, idx)}
+                        className={`py-3 px-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-white/[0.03] rounded-xl transition ${
+                          isDragging
+                            ? "opacity-40 border border-dashed border-amber-500/50 bg-amber-500/10"
+                            : ""
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          {/* Controles de Ordem (Subir / Descer para Mobile e PC + Grip para Arrastar) */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            {/* Grip para Arrastar no Desktop */}
+                            <div
+                              className="hidden sm:flex text-slate-600 hover:text-slate-300 cursor-grab active:cursor-grabbing p-0.5"
+                              title="Clique e arraste para reordenar"
+                            >
+                              <GripVertical className="h-4 w-4" />
+                            </div>
+
+                            {/* Botões Subir / Descer (ergonômicos no celular e rápidos no PC) */}
+                            <div className="flex flex-col gap-0.5">
+                              <button
+                                type="button"
+                                disabled={isFirst}
+                                onClick={() => handleMoveExercise(activeRoutine.id, idx, "up")}
+                                className="w-5 h-5 rounded flex items-center justify-center bg-slate-900/90 hover:bg-slate-800 text-slate-400 hover:text-amber-400 disabled:opacity-20 disabled:pointer-events-none transition border border-white/5 active:scale-90"
+                                title="Mover exercício para cima"
+                                aria-label={`Mover ${ex.exerciseName} para cima`}
+                              >
+                                <ChevronUp className="h-3 w-3" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isLast}
+                                onClick={() => handleMoveExercise(activeRoutine.id, idx, "down")}
+                                className="w-5 h-5 rounded flex items-center justify-center bg-slate-900/90 hover:bg-slate-800 text-slate-400 hover:text-amber-400 disabled:opacity-20 disabled:pointer-events-none transition border border-white/5 active:scale-90"
+                                title="Mover exercício para baixo"
+                                aria-label={`Mover ${ex.exerciseName} para baixo`}
+                              >
+                                <ChevronDown className="h-3 w-3" />
+                              </button>
+                            </div>
+
+                            {/* Número da Ordem */}
+                            <span className="text-slate-500 font-mono text-xs w-5 text-center font-bold">
+                              {idx + 1}
                             </span>
                           </div>
-                          {ex.notes && (
-                            <p className="text-[11px] text-slate-400 italic mt-0.5">{ex.notes}</p>
-                          )}
+
+                          <div className="p-1.5 rounded-lg bg-white/5 text-emerald-400 shrink-0">
+                            <Dumbbell className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-xs font-bold text-white">{ex.exerciseName}</h4>
+                              <span className="badge badge-muscle text-[9px]">
+                                {ex.targetMuscleGroup}
+                              </span>
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
+                                {ex.category === "COMPOUND" ? "Composto" : "Isolador"}
+                              </span>
+                            </div>
+                            {ex.notes && (
+                              <p className="text-[11px] text-slate-400 italic mt-0.5">{ex.notes}</p>
+                            )}
+                          </div>
                         </div>
-                      </div>
 
                       {/* Controls: Sets & Rep Range */}
                       <div className="flex items-center gap-4 self-end sm:self-auto">
@@ -588,8 +723,9 @@ export function RoutineSplitManager({ onStartWorkout }: RoutineSplitManagerProps
                         </button>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
+              </div>
               </div>
             )}
           </div>
