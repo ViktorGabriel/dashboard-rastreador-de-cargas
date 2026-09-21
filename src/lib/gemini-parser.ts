@@ -118,9 +118,37 @@ Regras de Extração e Powerbuilding:
   }
 }
 
+interface RawParsedSet {
+  set_number?: number;
+  set_type?: string;
+  weight_kg?: number | string;
+  reps?: number | string;
+  rpe?: number | string | null;
+  rir?: number | string | null;
+  rest_seconds?: number | string | null;
+  notes?: string | null;
+}
+
+interface RawParsedExercise {
+  name: string;
+  target_muscle_group?: string;
+  category?: "COMPOUND" | "ISOLATION";
+  notes?: string | null;
+  sets?: RawParsedSet[];
+}
+
+interface RawParsedWorkout {
+  is_workout?: boolean;
+  feedback_message?: string;
+  title?: string;
+  notes?: string | null;
+  date?: string;
+  exercises?: RawParsedExercise[];
+}
+
 // Normalização de exercícios contra o banco SQLite e cálculo de métricas
 async function enrichAndNormalizeParsedWorkout(
-  raw: any,
+  raw: RawParsedWorkout,
   defaultDate: string
 ): Promise<ParsedWorkoutResult> {
   if (!raw.is_workout) {
@@ -135,7 +163,7 @@ async function enrichAndNormalizeParsedWorkout(
   // Buscar todos os exercícios cadastrados no banco
   const existingExercises = db.select().from(schema.exercises).all();
 
-  const enrichedExercises: ParsedExercise[] = (raw.exercises || []).map((ex: any) => {
+  const enrichedExercises: ParsedExercise[] = (raw.exercises || []).map((ex: RawParsedExercise) => {
     const rawCanonical = sanitizeCanonical(ex.name);
     
     // Tenta encontrar um exercício já existente por similaridade ou exatidão
@@ -150,12 +178,13 @@ async function enrichAndNormalizeParsedWorkout(
     const muscleGroup = matched ? matched.targetMuscleGroup : (ex.target_muscle_group || "Geral");
     const category = matched ? (matched.category as "COMPOUND" | "ISOLATION") : (ex.category || "COMPOUND");
 
-    const sets: ParsedSet[] = (ex.sets || []).map((s: any, idx: number) => {
+    const sets: ParsedSet[] = (ex.sets || []).map((s: RawParsedSet, idx: number) => {
       const weight = Number(s.weight_kg) || 0;
       const reps = Number(s.reps) || 0;
+      const setType = (s.set_type as "TOP_SET" | "BACKOFF" | "WORKING" | "WARMUP") || "WORKING";
       return {
         set_number: s.set_number || idx + 1,
-        set_type: (s.set_type as any) || "WORKING",
+        set_type: setType,
         weight_kg: weight,
         reps: reps,
         rpe: s.rpe ? Number(s.rpe) : null,
@@ -182,7 +211,7 @@ async function enrichAndNormalizeParsedWorkout(
     feedback_message: raw.feedback_message,
     date: raw.date || defaultDate,
     title: raw.title || "Sessão de Treino",
-    notes: raw.notes,
+    notes: raw.notes || undefined,
     exercises: enrichedExercises,
   };
 }

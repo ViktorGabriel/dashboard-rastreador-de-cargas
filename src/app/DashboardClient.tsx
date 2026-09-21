@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { QuickWorkoutLogger } from "@/components/QuickWorkoutLogger";
 import { PreviewConfirmModal } from "@/components/PreviewConfirmModal";
@@ -16,24 +16,26 @@ export function DashboardClient({ initialStats }: { initialStats: { total_workou
   const [previewData, setPreviewData] = useState<ParsedWorkoutResult | null>(null);
   const [originalInputText, setOriginalInputText] = useState("");
 
-  const loadStats = useCallback(async () => {
-    try {
-      const res = await fetch("/api/metrics");
-      const data = await res.json();
-      if (data && typeof data.total_workouts === "number") {
-        setStats(data);
-      }
-    } catch (err) {
-      console.error("Erro ao carregar métricas globais:", err);
-    }
-  }, []);
-
   // Update stats when refreshTrigger changes
   useEffect(() => {
+    let active = true;
     if (refreshTrigger > 0) {
-      loadStats();
+      (async () => {
+        try {
+          const res = await fetch("/api/metrics");
+          const data = await res.json();
+          if (active && data && typeof data.total_workouts === "number") {
+            setStats(data);
+          }
+        } catch (err) {
+          console.error("Erro ao carregar métricas globais:", err);
+        }
+      })();
     }
-  }, [loadStats, refreshTrigger]);
+    return () => {
+      active = false;
+    };
+  }, [refreshTrigger]);
 
   const handleParsed = (result: ParsedWorkoutResult, originalText: string) => {
     setPreviewData(result);

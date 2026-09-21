@@ -11,9 +11,10 @@ export async function GET() {
       .all();
 
     return NextResponse.json(list);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     return NextResponse.json(
-      { error: error.message || "Erro ao buscar exercícios." },
+      { error: err.message || "Erro ao buscar exercícios." },
       { status: 500 }
     );
   }

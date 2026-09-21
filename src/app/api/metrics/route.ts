@@ -177,8 +177,9 @@ export async function GET(req: Request) {
       total_volume_kg: Math.round(totalVolumeResult),
       total_working_sets: totalSetsResult,
     });
-  } catch (error: any) {
-    console.error("Erro nas métricas:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Erro nas métricas:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
