@@ -56,64 +56,80 @@ Regras de Extração e Powerbuilding:
    - Extraia descanso em segundos se informado (ex: "3min de descanso" -> 180).
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            is_workout: { type: Type.BOOLEAN },
-            feedback_message: { type: Type.STRING },
-            date: { type: Type.STRING },
-            title: { type: Type.STRING },
-            notes: { type: Type.STRING },
-            exercises: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  name: { type: Type.STRING },
-                  target_muscle_group: { type: Type.STRING },
-                  category: { type: Type.STRING, enum: ["COMPOUND", "ISOLATION"] },
-                  notes: { type: Type.STRING },
-                  sets: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        set_number: { type: Type.INTEGER },
-                        set_type: { type: Type.STRING, enum: ["WARMUP", "TOP_SET", "WORKING", "BACKOFF"] },
-                        weight_kg: { type: Type.NUMBER },
-                        reps: { type: Type.INTEGER },
-                        rpe: { type: Type.NUMBER },
-                        rir: { type: Type.INTEGER },
-                        rest_seconds: { type: Type.INTEGER },
-                        notes: { type: Type.STRING },
+    const candidateModels = [
+      "gemini-2.5-flash-lite",
+      "gemini-flash-latest",
+      "gemini-3.6-flash",
+    ];
+
+    let lastError: unknown = null;
+
+    for (const modelName of candidateModels) {
+      try {
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                is_workout: { type: Type.BOOLEAN },
+                feedback_message: { type: Type.STRING },
+                date: { type: Type.STRING },
+                title: { type: Type.STRING },
+                notes: { type: Type.STRING },
+                exercises: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      name: { type: Type.STRING },
+                      target_muscle_group: { type: Type.STRING },
+                      category: { type: Type.STRING, enum: ["COMPOUND", "ISOLATION"] },
+                      notes: { type: Type.STRING },
+                      sets: {
+                        type: Type.ARRAY,
+                        items: {
+                          type: Type.OBJECT,
+                          properties: {
+                            set_number: { type: Type.INTEGER },
+                            set_type: { type: Type.STRING, enum: ["WARMUP", "TOP_SET", "WORKING", "BACKOFF"] },
+                            weight_kg: { type: Type.NUMBER },
+                            reps: { type: Type.INTEGER },
+                            rpe: { type: Type.NUMBER },
+                            rir: { type: Type.INTEGER },
+                            rest_seconds: { type: Type.INTEGER },
+                            notes: { type: Type.STRING },
+                          },
+                          required: ["set_number", "set_type", "weight_kg", "reps"],
+                        },
                       },
-                      required: ["set_number", "set_type", "weight_kg", "reps"],
                     },
+                    required: ["name", "target_muscle_group", "category", "sets"],
                   },
                 },
-                required: ["name", "target_muscle_group", "category", "sets"],
               },
+              required: ["is_workout", "exercises"],
             },
           },
-          required: ["is_workout", "exercises"],
-        },
-      },
-    });
+        });
 
-    const rawJson = response.text;
-    if (!rawJson) {
-      throw new Error("Resposta vazia da API do Gemini.");
+        const rawJson = response.text;
+        if (rawJson) {
+          const parsed = JSON.parse(rawJson);
+          return await enrichAndNormalizeParsedWorkout(parsed, today);
+        }
+      } catch (err: unknown) {
+        lastError = err;
+        console.warn(`Tentativa com modelo ${modelName} falhou, tentando próximo:`, (err as Error).message);
+      }
     }
 
-    const parsed = JSON.parse(rawJson);
-    return await enrichAndNormalizeParsedWorkout(parsed, today);
+    console.error("Todas as tentativas com modelos Gemini falharam, aplicando fallback inteligente:", lastError);
+    return parseWorkoutWithFallbackRules(text, today);
   } catch (error) {
-    console.error("Erro ao chamar Gemini Flash, aplicando fallback inteligente:", error);
+    console.error("Erro inesperado no parser Gemini:", error);
     return parseWorkoutWithFallbackRules(text, today);
   }
 }

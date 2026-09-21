@@ -80,7 +80,7 @@ export function Header({ stats }: HeaderProps) {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
             </span>
             <Zap className="h-3 w-3 fill-emerald-400" />
-            <span>Gemini Flash 2.5 Active</span>
+            <span>Gemini 3.6 Flash Active</span>
           </div>
         </div>
       </div>

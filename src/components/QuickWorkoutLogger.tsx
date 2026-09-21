@@ -81,7 +81,7 @@ export function QuickWorkoutLogger({ onParsed }: QuickWorkoutLoggerProps) {
               <h2 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
                 Registro Livre de Treino (AI Parser)
                 <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                  <Flame className="h-3 w-3" /> Gemini 2.5 Flash
+                  <Flame className="h-3 w-3" /> Gemini 3.6 Flash
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
