@@ -49,6 +49,33 @@ export const exerciseSets = sqliteTable("exercise_sets", {
   volumeLoad: real("volume_load").notNull(),
 });
 
+export const workoutRoutines = sqliteTable("workout_routines", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  splitType: text("split_type").notNull().default("UPPER_LOWER"), // UPPER_LOWER, PPL, PPL_UPPER_LOWER, BRO_SPLIT, CUSTOM
+  name: text("name").notNull(),
+  letter: text("letter").notNull().default("A"),
+  dayLabel: text("day_label"),
+  orderIndex: integer("order_index").notNull().default(0),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at").default(sql`(unixepoch())`),
+});
+
+export const routineExercises = sqliteTable("routine_exercises", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  routineId: integer("routine_id")
+    .notNull()
+    .references(() => workoutRoutines.id, { onDelete: "cascade" }),
+  exerciseId: integer("exercise_id")
+    .notNull()
+    .references(() => exercises.id, { onDelete: "cascade" }),
+  targetSets: integer("target_sets").notNull().default(3),
+  targetRepsMin: integer("target_reps_min").notNull().default(8),
+  targetRepsMax: integer("target_reps_max").notNull().default(10),
+  targetRpe: real("target_rpe"),
+  notes: text("notes"),
+  orderIndex: integer("order_index").notNull().default(0),
+});
+
 export type Exercise = typeof exercises.$inferSelect;
 export type NewExercise = typeof exercises.$inferInsert;
 export type Workout = typeof workouts.$inferSelect;
@@ -57,6 +84,10 @@ export type WorkoutExercise = typeof workoutExercises.$inferSelect;
 export type NewWorkoutExercise = typeof workoutExercises.$inferInsert;
 export type ExerciseSet = typeof exerciseSets.$inferSelect;
 export type NewExerciseSet = typeof exerciseSets.$inferInsert;
+export type WorkoutRoutine = typeof workoutRoutines.$inferSelect;
+export type NewWorkoutRoutine = typeof workoutRoutines.$inferInsert;
+export type RoutineExercise = typeof routineExercises.$inferSelect;
+export type NewRoutineExercise = typeof routineExercises.$inferInsert;
 
 import { relations } from "drizzle-orm";
 
@@ -66,6 +97,7 @@ export const workoutsRelations = relations(workouts, ({ many }) => ({
 
 export const exercisesRelations = relations(exercises, ({ many }) => ({
   workoutExercises: many(workoutExercises),
+  routineExercises: many(routineExercises),
 }));
 
 export const workoutExercisesRelations = relations(workoutExercises, ({ one, many }) => ({
@@ -84,5 +116,20 @@ export const exerciseSetsRelations = relations(exerciseSets, ({ one }) => ({
   workoutExercise: one(workoutExercises, {
     fields: [exerciseSets.workoutExerciseId],
     references: [workoutExercises.id],
+  }),
+}));
+
+export const workoutRoutinesRelations = relations(workoutRoutines, ({ many }) => ({
+  routineExercises: many(routineExercises),
+}));
+
+export const routineExercisesRelations = relations(routineExercises, ({ one }) => ({
+  routine: one(workoutRoutines, {
+    fields: [routineExercises.routineId],
+    references: [workoutRoutines.id],
+  }),
+  exercise: one(exercises, {
+    fields: [routineExercises.exerciseId],
+    references: [exercises.id],
   }),
 }));

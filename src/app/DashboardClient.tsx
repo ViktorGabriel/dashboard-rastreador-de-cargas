@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
+import { RoutineSplitManager } from "@/components/RoutineSplitManager";
 import { QuickWorkoutLogger } from "@/components/QuickWorkoutLogger";
 import { PreviewConfirmModal } from "@/components/PreviewConfirmModal";
 import { ProgressiveOverloadCharts } from "@/components/ProgressiveOverloadCharts";
@@ -15,6 +16,7 @@ export function DashboardClient({ initialStats }: { initialStats: { total_workou
 
   const [previewData, setPreviewData] = useState<ParsedWorkoutResult | null>(null);
   const [originalInputText, setOriginalInputText] = useState("");
+  const [routinePrompt, setRoutinePrompt] = useState("");
 
   // Update stats when refreshTrigger changes
   useEffect(() => {
@@ -45,7 +47,12 @@ export function DashboardClient({ initialStats }: { initialStats: { total_workou
   const handleWorkoutSaved = () => {
     setPreviewData(null);
     setOriginalInputText("");
+    setRoutinePrompt("");
     setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const handleStartRoutine = (promptText: string) => {
+    setRoutinePrompt(promptText);
   };
 
   return (
@@ -53,7 +60,14 @@ export function DashboardClient({ initialStats }: { initialStats: { total_workou
       <Header stats={stats} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        <QuickWorkoutLogger onParsed={handleParsed} />
+        {/* Gestão de Fichas e Divisões Clássicas */}
+        <RoutineSplitManager onStartWorkout={handleStartRoutine} />
+
+        {/* Logger Rápido de Treino */}
+        <QuickWorkoutLogger
+          onParsed={handleParsed}
+          externalText={routinePrompt}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">

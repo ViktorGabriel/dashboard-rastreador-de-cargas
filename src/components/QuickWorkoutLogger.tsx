@@ -6,6 +6,7 @@ import { ParsedWorkoutResult } from "@/lib/formulas";
 
 interface QuickWorkoutLoggerProps {
   onParsed: (result: ParsedWorkoutResult, originalText: string) => void;
+  externalText?: string;
 }
 
 const TEMPLATES = [
@@ -23,10 +24,18 @@ const TEMPLATES = [
   },
 ];
 
-export function QuickWorkoutLogger({ onParsed }: QuickWorkoutLoggerProps) {
+export function QuickWorkoutLogger({ onParsed, externalText }: QuickWorkoutLoggerProps) {
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const [prevExternalText, setPrevExternalText] = useState(externalText);
+  if (externalText !== prevExternalText) {
+    setPrevExternalText(externalText);
+    if (externalText) {
+      setInputText(externalText);
+    }
+  }
 
   const handleAnalyze = async () => {
     if (!inputText.trim()) return;
