@@ -54,12 +54,19 @@
   padding: 0;
 }
 
+html {
+  width: 100%;
+  min-height: 100%;
+}
+
 body {
+  width: 100%;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-sans);
   min-height: 100vh;
   line-height: 1.5;
+  overflow-x: hidden;
   background-image: 
     radial-gradient(ellipse at top left, rgba(16, 185, 129, 0.06), transparent 50%),
     radial-gradient(ellipse at top right, rgba(56, 189, 248, 0.04), transparent 50%),

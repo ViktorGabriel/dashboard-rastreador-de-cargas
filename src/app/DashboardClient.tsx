@@ -56,10 +56,10 @@ export function DashboardClient({ initialStats }: { initialStats: { total_workou
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-bg-primary text-text-primary">
+    <div className="min-h-screen w-full flex flex-col bg-bg-primary text-text-primary">
       <Header stats={stats} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <main className="flex-1 w-full max-w-[1780px] 2xl:max-w-[2040px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 space-y-6">
         {/* Gestão de Fichas e Divisões Clássicas */}
         <RoutineSplitManager onStartWorkout={handleStartRoutine} />
 
@@ -69,11 +69,11 @@ export function DashboardClient({ initialStats }: { initialStats: { total_workou
           externalText={routinePrompt}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-8">
             <ProgressiveOverloadCharts refreshTrigger={refreshTrigger} />
           </div>
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-4">
             <MuscleVolumeBarChart refreshTrigger={refreshTrigger} />
           </div>
         </div>
@@ -93,8 +93,11 @@ export function DashboardClient({ initialStats }: { initialStats: { total_workou
         />
       )}
 
-      <footer className="w-full border-t border-white/5 py-4 text-center text-xs text-slate-500">
-        IRONPARSE // Sistema de Rastreamento de Força e Sobrecarga Progressiva com IA
+      <footer className="w-full border-t border-white/5 py-4 text-xs text-slate-500">
+        <div className="w-full max-w-[1780px] 2xl:max-w-[2040px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span>IRONPARSE // Sistema de Rastreamento de Força e Sobrecarga Progressiva com IA</span>
+          <span className="text-[11px] text-slate-600">Ultra-Wide & High Density Ready</span>
+        </div>
       </footer>
     </div>
   );
