@@ -10,6 +10,9 @@ import {
   ChevronDown,
   Check,
   X,
+  Sparkles,
+  Loader2,
+  CheckCircle2,
 } from "lucide-react";
 
 interface ExerciseOption {
@@ -53,17 +56,45 @@ interface SplitPreset {
   daysCount: number;
 }
 
+const DEFAULT_PRESETS: SplitPreset[] = [
+  {
+    type: "UPPER_LOWER",
+    label: "Upper / Lower",
+    description: "Superior e Inferior 2x na semana (4 dias)",
+    daysCount: 4,
+  },
+  {
+    type: "PPL",
+    label: "PPL (Push / Pull / Legs)",
+    description: "Empurrar, Puxar e Pernas (3 a 6 dias)",
+    daysCount: 3,
+  },
+  {
+    type: "PPL_UPPER_LOWER",
+    label: "PPL + Upper/Lower",
+    description: "Híbrido de alta frequência (5 dias)",
+    daysCount: 5,
+  },
+  {
+    type: "BRO_SPLIT",
+    label: "Bro Split",
+    description: "1 grupo muscular principal por dia (5 dias)",
+    daysCount: 5,
+  },
+];
+
 interface RoutineSplitManagerProps {
   onStartWorkout: (promptText: string) => void;
 }
 
 export function RoutineSplitManager({ onStartWorkout }: RoutineSplitManagerProps) {
   const [routines, setRoutines] = useState<RoutineItem[]>([]);
-  const [presets, setPresets] = useState<SplitPreset[]>([]);
+  const [presets, setPresets] = useState<SplitPreset[]>(DEFAULT_PRESETS);
   const [currentSplit, setCurrentSplit] = useState<string>("UPPER_LOWER");
   const [activeTabId, setActiveTabId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isChangingPreset, setIsChangingPreset] = useState(false);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
 
   // Modal para adicionar exercício
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -84,8 +115,12 @@ export function RoutineSplitManager({ onStartWorkout }: RoutineSplitManagerProps
         const data = await res.json();
         if (active && data.routines) {
           setRoutines(data.routines);
-          setPresets(data.presets || []);
-          setCurrentSplit(data.currentSplit || "UPPER_LOWER");
+          if (Array.isArray(data.presets) && data.presets.length > 0) {
+            setPresets(data.presets);
+          }
+          if (data.currentSplit) {
+            setCurrentSplit(data.currentSplit);
+          }
           if (data.routines.length > 0) {
             setActiveTabId((prev) => (prev ? prev : data.routines[0].id));
           }
@@ -123,15 +158,9 @@ export function RoutineSplitManager({ onStartWorkout }: RoutineSplitManagerProps
     }
   }, [isAddModalOpen, selectedExId]);
 
-  // Trocar de Preset (Upper/Lower, PPL, etc.)
+  // Trocar de Preset (Upper/Lower, PPL, etc.) sem bloqueio
   const handleSelectPreset = async (splitType: string) => {
-    if (splitType === currentSplit) return;
-    if (
-      !confirm(
-        `Deseja carregar a divisão ${splitType}? As fichas atuais serão substituídas pelo preset selecionado.`
-      )
-    )
-      return;
+    if (splitType === currentSplit && routines.length > 0) return;
 
     setIsChangingPreset(true);
     try {
@@ -141,12 +170,16 @@ export function RoutineSplitManager({ onStartWorkout }: RoutineSplitManagerProps
         body: JSON.stringify({ action: "apply_preset", splitType }),
       });
       const data = await res.json();
-      if (data.routines) {
+      if (data.routines && data.routines.length > 0) {
         setRoutines(data.routines);
         setCurrentSplit(splitType);
-        if (data.routines.length > 0) {
-          setActiveTabId(data.routines[0].id);
-        }
+        setActiveTabId(data.routines[0].id);
+
+        const matched = (presets.length > 0 ? presets : DEFAULT_PRESETS).find(
+          (p) => p.type === splitType
+        );
+        setSuccessToast(`Divisão ${matched?.label || splitType} aplicada com sucesso!`);
+        setTimeout(() => setSuccessToast(null), 3500);
       }
     } catch (err) {
       console.error("Erro ao aplicar preset:", err);
@@ -276,7 +309,7 @@ export function RoutineSplitManager({ onStartWorkout }: RoutineSplitManagerProps
   return (
     <div className="bezel-shell">
       <div className="bezel-core p-5 sm:p-6 space-y-5">
-        {/* Header & Preset Switcher */}
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 text-amber-400 border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.15)]">
@@ -292,21 +325,21 @@ export function RoutineSplitManager({ onStartWorkout }: RoutineSplitManagerProps
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Alterne entre divisões clássicas (PPL, Upper/Lower, Bro Split) e defina suas metas de repetições
+                Alterne com 1 clique entre divisões clássicas ou personalize suas fichas e metas de repetições
               </p>
             </div>
           </div>
 
-          {/* Preset Selector Dropdown */}
+          {/* Quick Select Dropdown (Fallback/Compact) */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 font-medium hidden md:inline">Divisão:</span>
+            <span className="text-xs text-slate-400 font-medium hidden lg:inline">Divisão rápida:</span>
             <div className="relative">
               <select
                 id="split-preset-selector"
                 value={currentSplit}
                 disabled={isChangingPreset}
                 onChange={(e) => handleSelectPreset(e.target.value)}
-                className="appearance-none bg-slate-900 border border-white/15 hover:border-white/25 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-white focus:border-amber-500 outline-none transition cursor-pointer shadow-sm"
+                className="appearance-none bg-slate-900 border border-white/15 hover:border-white/25 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-white focus:border-amber-500 outline-none transition cursor-pointer shadow-sm disabled:opacity-50"
               >
                 {presets.map((p) => (
                   <option key={p.type} value={p.type} className="bg-slate-900 text-white font-medium">
@@ -316,6 +349,76 @@ export function RoutineSplitManager({ onStartWorkout }: RoutineSplitManagerProps
               </select>
               <ChevronDown className="h-3.5 w-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
+          </div>
+        </div>
+
+        {/* Feedback Toast */}
+        {successToast && (
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold animate-in fade-in slide-in-from-top-2 duration-200">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span>{successToast}</span>
+          </div>
+        )}
+
+        {/* Preset Cards Selector Grid */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-amber-400" /> Escolha sua Divisão Clássica:
+            </span>
+            {isChangingPreset && (
+              <span className="text-xs text-amber-400 flex items-center gap-1.5 animate-pulse font-medium">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Carregando divisão...
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+            {presets.map((p) => {
+              const isActive = currentSplit === p.type;
+              return (
+                <button
+                  key={p.type}
+                  type="button"
+                  id={`preset-btn-${p.type}`}
+                  disabled={isChangingPreset}
+                  onClick={() => handleSelectPreset(p.type)}
+                  className={`group relative text-left p-3 rounded-xl border transition-all duration-200 flex flex-col justify-between cursor-pointer ${
+                    isActive
+                      ? "bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-transparent border-amber-500/60 shadow-[0_0_15px_rgba(245,158,11,0.15)] text-white"
+                      : "bg-slate-900/60 hover:bg-slate-800/80 border-white/10 hover:border-amber-500/30 text-slate-300 hover:text-white"
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-1 mb-1">
+                      <span className={`text-xs font-bold leading-tight ${isActive ? "text-amber-300" : "text-white"}`}>
+                        {p.label}
+                      </span>
+                      {isActive ? (
+                        <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.8)] shrink-0 mt-0.5" />
+                      ) : null}
+                    </div>
+                    <p className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">
+                      {p.description}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 mt-2.5 pt-2 border-t border-white/5">
+                    <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/5 font-mono">
+                      {p.daysCount} dias/sem
+                    </span>
+                    {isActive ? (
+                      <span className="font-extrabold text-amber-400 text-[10px] tracking-wider flex items-center gap-1">
+                        <Check className="h-3 w-3" /> ATIVA
+                      </span>
+                    ) : (
+                      <span className="text-slate-500 group-hover:text-amber-300 transition-colors font-semibold">
+                        Ativar ➔
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
