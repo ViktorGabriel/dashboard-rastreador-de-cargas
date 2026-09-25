@@ -117,6 +117,7 @@ dashboard-rastreador-de-cargas/
 │   ├── app/                          # Next.js App Router
 │   │   ├── api/                      # Endpoints HTTP da aplicação
 │   │   │   ├── exercises/            # Listagem de catálogo de exercícios
+│   │   │   ├── export/               # Exportação analítica (CSV com UTF-8 BOM e JSON completo)
 │   │   │   ├── metrics/              # Agregações de 1RM, volume e sobrecarga
 │   │   │   ├── parse-workout/        # Integração NLP com Google Gemini Flash
 │   │   │   ├── routines/             # Gerenciamento de rotinas e splits
@@ -127,6 +128,7 @@ dashboard-rastreador-de-cargas/
 │   │   └── DashboardClient.tsx       # Orquestrador de estado do cliente
 │   ├── components/                   # Componentes modulares de interface
 │   │   ├── Header.tsx                # Cabeçalho com métricas agregadas e estatísticas
+│   │   ├── ExportDataModal.tsx       # Modal interativo de exportação e backup de dados
 │   │   ├── QuickWorkoutLogger.tsx    # Entrada de texto livre com disparo para IA
 │   │   ├── PreviewConfirmModal.tsx   # Modal de validação e edição antes do commit
 │   │   ├── ProgressiveOverloadCharts.tsx # Gráficos de 1RM e evolução de cargas
@@ -138,11 +140,13 @@ dashboard-rastreador-de-cargas/
 │   │   ├── schema.ts                 # Schemas relacionais do Drizzle ORM
 │   │   └── seed.ts                   # Carga inicial com exercícios canônicos e fichas
 │   └── lib/                          # Regras de negócio, serviços e utilitários
+│       ├── export-service.ts         # Geração de CSV RFC 4180, backups JSON e queries
 │       ├── formulas.ts               # Cálculo de 1RM (Epley), Volume Load e sanitização
 │       ├── gemini-parser.ts          # Configuração da LLM e schema de saída
 │       ├── preset-routines.ts        # Modelos de divisões (Upper/Lower, PPL, Bro Split)
 │       └── workout-service.ts        # Lógica de inserção e montagem relacional
 ├── tests/                            # Testes unitários com Vitest
+│   ├── export.test.ts                # Validação de escaping CSV, BOM e integridade de export
 │   ├── formulas.test.ts              # Validação das fórmulas de 1RM e Volume Load
 │   └── routines.test.ts              # Validação de presets e divisões de treino
 ├── drizzle.config.ts                 # Configurações do Drizzle Kit
@@ -377,7 +381,7 @@ npm run lint
 - [x] Gráficos de sobrecarga progressiva e delta comparativo entre sessões.
 - [x] Gráfico semanal de volume por grupo muscular para hipertrofia.
 - [x] Gerenciador de divisões clássicas (Upper/Lower, PPL, Bro Split).
-- [ ] Exportação completa de dados nos formatos CSV e JSON.
+- [x] Exportação completa de dados nos formatos CSV e JSON.
 - [ ] Suporte a PWA com funcionamento offline e sincronização em background.
 - [ ] Cronômetro de descanso integrado com alertas sonoros personalizáveis.
 - [ ] Gráfico de fadiga acumulada e correlação RPE vs RIR por bloco de periodização.
