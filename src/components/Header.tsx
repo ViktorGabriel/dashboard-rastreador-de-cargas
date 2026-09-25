@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
-import { Dumbbell, Zap, Trophy, Flame, Layers } from "lucide-react";
+import React, { useState } from "react";
+import { Dumbbell, Zap, Trophy, Flame, Layers, Download } from "lucide-react";
+import { ExportDataModal } from "@/components/ExportDataModal";
 
 interface HeaderProps {
   stats: {
@@ -12,6 +13,7 @@ interface HeaderProps {
 }
 
 export function Header({ stats }: HeaderProps) {
+  const [isExportOpen, setIsExportOpen] = useState(false);
   const volumeInTons = (stats.total_volume_kg / 1000).toFixed(1);
 
   return (
@@ -82,8 +84,24 @@ export function Header({ stats }: HeaderProps) {
             <Zap className="h-3 w-3 fill-emerald-400" />
             <span>Gemini 3.6 Flash Active</span>
           </div>
+
+          {/* Export Data Button */}
+          <button
+            onClick={() => setIsExportOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900/90 border border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-500/10 text-emerald-400 text-xs font-bold transition shadow-sm hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] cursor-pointer active:scale-95"
+            title="Exportar dados em CSV e JSON"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>Exportar</span>
+          </button>
         </div>
       </div>
+
+      <ExportDataModal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        stats={stats}
+      />
     </header>
   );
 }
