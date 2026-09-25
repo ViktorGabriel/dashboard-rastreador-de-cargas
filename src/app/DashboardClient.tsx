@@ -12,6 +12,7 @@ import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { OfflineSyncModal } from "@/components/OfflineSyncModal";
 import { ManualOfflineWorkoutModal } from "@/components/ManualOfflineWorkoutModal";
 import { PWAInstallModal } from "@/components/PWAInstallModal";
+import { RestTimer } from "@/components/RestTimer";
 import { ParsedWorkoutResult } from "@/lib/formulas";
 import { usePWA } from "@/lib/use-pwa";
 
@@ -74,6 +75,8 @@ export function DashboardClient({
     setRoutinePrompt("");
     setRefreshTrigger((prev) => prev + 1);
     refreshQueueCount();
+    // Auto-start rest timer after saving a workout
+    window.dispatchEvent(new CustomEvent("auto-start-rest-timer"));
   };
 
   const handleStartRoutine = (promptText: string) => {
@@ -128,6 +131,7 @@ export function DashboardClient({
         isOnline={isOnline}
         pendingCount={pendingCount}
         onOpenSyncModal={() => setIsSyncModalOpen(true)}
+        onOpenTimer={() => window.dispatchEvent(new CustomEvent("open-rest-timer"))}
       />
 
       {/* Modais PWA e Confirmação */}
@@ -167,6 +171,9 @@ export function DashboardClient({
         isInstallable={isInstallable}
         isInstalled={isInstalled}
       />
+
+      {/* Floating Rest Timer */}
+      <RestTimer />
 
       <footer className="w-full border-t border-white/5 py-4 text-xs text-slate-500 mb-14 md:mb-0">
         <div className="w-full max-w-[1780px] 2xl:max-w-[2040px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 flex flex-col sm:flex-row items-center justify-between gap-2">

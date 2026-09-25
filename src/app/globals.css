@@ -273,3 +273,9 @@ button, a, input, select, textarea {
   }
 }
 
+
+/* Rest Timer pulse animation on completion */
+@keyframes rest-timer-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}

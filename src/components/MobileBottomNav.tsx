@@ -1,16 +1,18 @@
 "use client";
 
 import React from "react";
-import { Dumbbell, Sparkles, TrendingUp, History, WifiOff, Wifi } from "lucide-react";
+import { Dumbbell, Sparkles, TrendingUp, History, WifiOff, Wifi, Timer } from "lucide-react";
 
 interface MobileBottomNavProps {
   onOpenSyncModal: () => void;
+  onOpenTimer: () => void;
   pendingCount: number;
   isOnline: boolean;
 }
 
 export function MobileBottomNav({
   onOpenSyncModal,
+  onOpenTimer,
   pendingCount,
   isOnline,
 }: MobileBottomNavProps) {
@@ -88,7 +90,22 @@ export function MobileBottomNav({
           <span className="text-[10px] font-semibold">Histórico</span>
         </button>
 
-        {/* 5. Status Offline & Sync */}
+        {/* 5. Rest Timer */}
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic();
+            onOpenTimer();
+          }}
+          className="flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-slate-400 hover:text-sky-400 active:text-sky-400 transition"
+        >
+          <div className="p-1 rounded-lg bg-slate-900 text-slate-300">
+            <Timer className="h-4 w-4" />
+          </div>
+          <span className="text-[10px] font-semibold">Descanso</span>
+        </button>
+
+        {/* 6. Status Offline & Sync */}
         <button
           type="button"
           onClick={() => {
