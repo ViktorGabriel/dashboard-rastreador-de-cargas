@@ -253,3 +253,23 @@ h1, h2, h3, h4, h5, h6 {
   background-size: 300% 300%;
   animation: ai-scan 3s ease infinite;
 }
+
+/* Mobile Safe Area & Touch Ergonomics for PWA */
+.safe-bottom {
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+button, a, input, select, textarea {
+  touch-action: manipulation;
+}
+
+@media (max-width: 640px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px !important; /* Evita auto-zoom indesejado no Safari iOS */
+  }
+}
+

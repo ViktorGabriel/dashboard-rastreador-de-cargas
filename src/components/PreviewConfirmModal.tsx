@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Check, X, Calendar, Edit3, Trash2, Plus, AlertCircle, Dumbbell, Zap } from "lucide-react";
 import { ParsedWorkoutResult, ParsedExercise, calculate1RM, calculateVolumeLoad } from "@/lib/formulas";
+import { enqueueOfflineWorkout } from "@/lib/offline-sync";
 
 interface PreviewConfirmModalProps {
   data: ParsedWorkoutResult;
@@ -112,7 +113,7 @@ export function PreviewConfirmModal({
     setExercises(updated);
   };
 
-  // Salvar no SQLite
+  // Salvar no SQLite com suporte a modo offline resiliente
   const handleSave = async () => {
     if (exercises.length === 0) {
       setErrorMsg("Adicione ao menos um exercício com séries para salvar.");
@@ -121,6 +122,29 @@ export function PreviewConfirmModal({
 
     setIsSaving(true);
     setErrorMsg(null);
+
+    // Se estiver explicitamente offline, enfileira diretamente
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      enqueueOfflineWorkout({
+        type: "STRUCTURED_WORKOUT",
+        title,
+        workoutData: {
+          date,
+          title,
+          notes,
+          raw_input_text: originalText,
+          exercises,
+        },
+      });
+
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate([15, 30, 15]);
+      }
+
+      setIsSaving(false);
+      onSaved();
+      return;
+    }
 
     try {
       const res = await fetch("/api/workouts", {
@@ -135,15 +159,45 @@ export function PreviewConfirmModal({
         }),
       });
 
-      const resData = await res.json();
+      const resData = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(resData.error || "Falha ao salvar no banco.");
+        throw new Error(resData.error || `Erro HTTP ${res.status}`);
+      }
+
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate(15);
       }
 
       onSaved();
     } catch (err: unknown) {
       const error = err as Error;
-      setErrorMsg(error.message || "Erro ao persistir treino.");
+      // Se for falha de conexão de rede, enfileira para não perder o treino do atleta
+      if (
+        typeof navigator !== "undefined" &&
+        (!navigator.onLine ||
+          error.message?.toLowerCase().includes("failed to fetch") ||
+          error.message?.toLowerCase().includes("network"))
+      ) {
+        enqueueOfflineWorkout({
+          type: "STRUCTURED_WORKOUT",
+          title,
+          workoutData: {
+            date,
+            title,
+            notes,
+            raw_input_text: originalText,
+            exercises,
+          },
+        });
+
+        if (typeof navigator !== "undefined" && navigator.vibrate) {
+          navigator.vibrate([15, 30, 15]);
+        }
+
+        onSaved();
+      } else {
+        setErrorMsg(error.message || "Erro ao persistir treino.");
+      }
     } finally {
       setIsSaving(false);
     }

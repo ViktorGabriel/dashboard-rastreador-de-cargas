@@ -1,0 +1,66 @@
+{
+  "name": "IronTracker — Rastreador de Cargas & Powerbuilding",
+  "short_name": "IronTracker",
+  "description": "Rastreamento inteligente de sobrecarga progressiva com IA e suporte offline completo para treinos de força e hipertrofia.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090d14",
+  "theme_color": "#10b981",
+  "orientation": "portrait",
+  "categories": ["fitness", "health", "sports", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Novo Treino",
+      "short_name": "Treinar",
+      "description": "Registrar um novo treino com IA ou offline",
+      "url": "/?action=new_workout",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Fichas & Rotinas",
+      "short_name": "Fichas",
+      "description": "Visualizar e selecionar fichas de treino",
+      "url": "/?action=routines",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Histórico de Treinos",
+      "short_name": "Histórico",
+      "description": "Consultar sessões e cargas passadas",
+      "url": "/?action=history",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -1,12 +1,24 @@
 "use client";
 
 import React, { useState } from "react";
-import { Sparkles, ArrowRight, Loader2, RotateCcw, HelpCircle, Flame } from "lucide-react";
+import {
+  Sparkles,
+  ArrowRight,
+  Loader2,
+  RotateCcw,
+  HelpCircle,
+  Flame,
+  WifiOff,
+  Clock,
+  CheckCircle2,
+} from "lucide-react";
 import { ParsedWorkoutResult } from "@/lib/formulas";
+import { enqueueOfflineWorkout } from "@/lib/offline-sync";
 
 interface QuickWorkoutLoggerProps {
   onParsed: (result: ParsedWorkoutResult, originalText: string) => void;
   externalText?: string;
+  isOnline?: boolean;
 }
 
 const TEMPLATES = [
@@ -28,6 +40,8 @@ export function QuickWorkoutLogger({ onParsed, externalText }: QuickWorkoutLogge
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [isOfflinePrompt, setIsOfflinePrompt] = useState(false);
 
   const [prevExternalText, setPrevExternalText] = useState(externalText);
   if (externalText !== prevExternalText) {
@@ -37,11 +51,39 @@ export function QuickWorkoutLogger({ onParsed, externalText }: QuickWorkoutLogge
     }
   }
 
+  const handleQueueOffline = () => {
+    if (!inputText.trim()) return;
+
+    enqueueOfflineWorkout({
+      type: "RAW_TEXT",
+      text: inputText,
+    });
+
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate([15, 30, 15]);
+    }
+
+    setInputText("");
+    setIsOfflinePrompt(false);
+    setErrorMsg(null);
+    setSuccessMsg(
+      "Treino salvo na fila local offline! A inteligência artificial irá analisá-lo e gravá-lo no banco automaticamente assim que a conexão retornar."
+    );
+  };
+
   const handleAnalyze = async () => {
     if (!inputText.trim()) return;
 
+    // Check if browser is definitely offline
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setIsOfflinePrompt(true);
+      return;
+    }
+
     setIsLoading(true);
     setErrorMsg(null);
+    setSuccessMsg(null);
+    setIsOfflinePrompt(false);
 
     try {
       const res = await fetch("/api/parse-workout", {
@@ -64,7 +106,16 @@ export function QuickWorkoutLogger({ onParsed, externalText }: QuickWorkoutLogge
       onParsed(data, inputText);
     } catch (err: unknown) {
       const error = err as Error;
-      setErrorMsg(error.message || "Erro de conexão ao analisar treino.");
+      // If error is network drop, offer offline queuing
+      if (
+        !navigator.onLine ||
+        error.message?.toLowerCase().includes("failed to fetch") ||
+        error.message?.toLowerCase().includes("network")
+      ) {
+        setIsOfflinePrompt(true);
+      } else {
+        setErrorMsg(error.message || "Erro de conexão ao analisar treino.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -177,6 +228,52 @@ export function QuickWorkoutLogger({ onParsed, externalText }: QuickWorkoutLogge
             )}
           </button>
         </div>
+
+        {/* Offline Queue Prompt Alert */}
+        {isOfflinePrompt && (
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-modal-in">
+            <div className="flex items-center gap-2">
+              <WifiOff className="h-4 w-4 shrink-0 text-amber-400" />
+              <span>
+                <strong>Dispositivo offline ou instável.</strong> Deseja salvar este treino na fila para sincronização automática quando a rede voltar?
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleQueueOffline}
+                className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition active:scale-95 shadow-sm"
+              >
+                <Clock className="h-3.5 w-3.5" />
+                <span>Salvar na Fila Offline</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsOfflinePrompt(false)}
+                className="p-1 text-slate-400 hover:text-white font-bold"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Success Confirmation Alert */}
+        {successMsg && (
+          <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center justify-between animate-modal-in">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+              <span>{successMsg}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSuccessMsg(null)}
+              className="text-emerald-400 hover:text-emerald-200 font-bold ml-2 p-1"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {/* Feedback Alert */}
         {errorMsg && (

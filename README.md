@@ -55,6 +55,8 @@ A inteligência artificial analisa a sintaxe, normaliza nomes de exercícios, de
   - Presets consagrados prontos para uso: **Upper/Lower (4 dias)**, **Push/Pull/Legs (PPL - 3 dias)**, **PPL + Upper/Lower (5 dias)** e **Bro Split (5 dias)**.
   - Personalização de exercícios-alvo, metas de séries, faixas de repetições (min/max) e RPE alvo.
 - 🗂️ **Histórico Cronológico e Linha do Tempo:** Visualização detalhada de sessões anteriores com cards expansíveis e exclusão segura em cascata.
+- 📱 **PWA Mobile-First & Funcionamento Offline:** Instalável na tela inicial do celular (iOS / Android) e desktop. Service Worker com pre-caching inteligente do App Shell, visualização offline de exercícios e rotinas, e **Background Sync** com fila de sincronização automática para treinos registrados sem sinal na academia.
+- 💾 **Exportação e Backup Analítico:** Download dos dados completos em formato CSV tabular (com UTF-8 BOM para Excel) e backup JSON estruturado.
 
 ---
 
@@ -382,7 +384,7 @@ npm run lint
 - [x] Gráfico semanal de volume por grupo muscular para hipertrofia.
 - [x] Gerenciador de divisões clássicas (Upper/Lower, PPL, Bro Split).
 - [x] Exportação completa de dados nos formatos CSV e JSON.
-- [ ] Suporte a PWA com funcionamento offline e sincronização em background.
+- [x] Suporte a PWA com funcionamento offline e sincronização em background.
 - [ ] Cronômetro de descanso integrado com alertas sonoros personalizáveis.
 - [ ] Gráfico de fadiga acumulada e correlação RPE vs RIR por bloco de periodização.
 
