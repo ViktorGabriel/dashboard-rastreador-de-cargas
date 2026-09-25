@@ -13,6 +13,7 @@ import { OfflineSyncModal } from "@/components/OfflineSyncModal";
 import { ManualOfflineWorkoutModal } from "@/components/ManualOfflineWorkoutModal";
 import { PWAInstallModal } from "@/components/PWAInstallModal";
 import { RestTimer } from "@/components/RestTimer";
+import { FatigueRPEChart } from "@/components/FatigueRPEChart";
 import { ParsedWorkoutResult } from "@/lib/formulas";
 import { usePWA } from "@/lib/use-pwa";
 
@@ -117,6 +118,9 @@ export function DashboardClient({
             <MuscleVolumeBarChart refreshTrigger={refreshTrigger} />
           </div>
         </div>
+
+        {/* Fadiga Acumulada & RPE vs RIR */}
+        <FatigueRPEChart refreshTrigger={refreshTrigger} />
 
         <div id="workout-history-feed">
           <WorkoutHistoryFeed

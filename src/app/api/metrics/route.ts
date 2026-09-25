@@ -155,7 +155,157 @@ export async function GET(req: Request) {
       );
     }
 
-    // 3. Estatísticas Globais do Dashboard
+    // 3. Fadiga Acumulada e Correlação RPE vs RIR por bloco de periodização
+    if (summaryType === "fatigue") {
+      // Pull all working/top-set sets with their workout date, rpe, rir, volume
+      const fatigueRows = db
+        .select({
+          workoutDate: schema.workouts.date,
+          setType: schema.exerciseSets.setType,
+          weightKg: schema.exerciseSets.weightKg,
+          reps: schema.exerciseSets.reps,
+          rpe: schema.exerciseSets.rpe,
+          rir: schema.exerciseSets.rir,
+          volumeLoad: schema.exerciseSets.volumeLoad,
+          estimated1rm: schema.exerciseSets.estimated1rm,
+          muscleGroup: schema.exercises.targetMuscleGroup,
+        })
+        .from(schema.exerciseSets)
+        .innerJoin(
+          schema.workoutExercises,
+          eq(schema.exerciseSets.workoutExerciseId, schema.workoutExercises.id)
+        )
+        .innerJoin(schema.workouts, eq(schema.workoutExercises.workoutId, schema.workouts.id))
+        .innerJoin(schema.exercises, eq(schema.workoutExercises.exerciseId, schema.exercises.id))
+        .where(sql`${schema.exerciseSets.setType} != 'WARMUP'`)
+        .orderBy(asc(schema.workouts.date))
+        .all();
+
+      if (fatigueRows.length === 0) {
+        return NextResponse.json({ blocks: [], scatter: [] });
+      }
+
+      // ── Determine ISO week key (YYYY-Www) ────────────────────────────────
+      function isoWeekKey(dateStr: string): string {
+        const d = new Date(dateStr + "T12:00:00Z");
+        const jan4 = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+        const weekNum = Math.ceil(
+          ((d.getTime() - jan4.getTime()) / 86400000 + jan4.getUTCDay() + 1) / 7
+        );
+        return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, "0")}`;
+      }
+
+      // ── Group by week block ───────────────────────────────────────────────
+      type BlockAcc = {
+        weekKey: string;
+        label: string;
+        totalVolume: number;
+        rpeSum: number;
+        rpeCount: number;
+        rirSum: number;
+        rirCount: number;
+        setsCount: number;
+        heavySets: number; // RPE >= 8
+        sessions: Set<string>;
+      };
+
+      const blockMap = new Map<string, BlockAcc>();
+
+      for (const row of fatigueRows) {
+        const key = isoWeekKey(row.workoutDate);
+        if (!blockMap.has(key)) {
+          // Build short label like "Sem 36" from week number
+          const weekNum = key.split("-W")[1];
+          blockMap.set(key, {
+            weekKey: key,
+            label: `Sem ${weekNum}`,
+            totalVolume: 0,
+            rpeSum: 0,
+            rpeCount: 0,
+            rirSum: 0,
+            rirCount: 0,
+            setsCount: 0,
+            heavySets: 0,
+            sessions: new Set(),
+          });
+        }
+        const b = blockMap.get(key)!;
+        b.totalVolume += row.volumeLoad;
+        b.setsCount += 1;
+        b.sessions.add(row.workoutDate);
+
+        if (row.rpe !== null && row.rpe !== undefined) {
+          b.rpeSum += row.rpe;
+          b.rpeCount += 1;
+          if (row.rpe >= 8) b.heavySets += 1;
+        }
+        if (row.rir !== null && row.rir !== undefined) {
+          b.rirSum += row.rir;
+          b.rirCount += 1;
+        }
+      }
+
+      // ── Build block array ─────────────────────────────────────────────────
+      const sortedBlocks = Array.from(blockMap.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([, b]) => {
+          const avgRpe = b.rpeCount > 0 ? Number((b.rpeSum / b.rpeCount).toFixed(1)) : null;
+          const avgRir = b.rirCount > 0 ? Number((b.rirSum / b.rirCount).toFixed(1)) : null;
+          const vol = Math.round(b.totalVolume);
+
+          // Fatigue score: normalised volume contribution + heavy-set penalty
+          // Will be normalised across blocks below
+          return {
+            weekKey: b.weekKey,
+            label: b.label,
+            volume_kg: vol,
+            sets: b.setsCount,
+            sessions: b.sessions.size,
+            avg_rpe: avgRpe,
+            avg_rir: avgRir,
+            heavy_sets: b.heavySets,
+            // Raw fatigue components (normalised below)
+            _rawVol: vol,
+            _rawHeavy: b.heavySets,
+          };
+        });
+
+      // Normalise fatigue components 0..100
+      const maxVol = Math.max(...sortedBlocks.map((b) => b._rawVol), 1);
+      const maxHeavy = Math.max(...sortedBlocks.map((b) => b._rawHeavy), 1);
+
+      const blocks = sortedBlocks.map((b) => {
+        const volScore = Math.round((b._rawVol / maxVol) * 70);   // 70% weight to volume
+        const heavyScore = Math.round((b._rawHeavy / maxHeavy) * 30); // 30% weight to intensity
+        return {
+          label: b.label,
+          weekKey: b.weekKey,
+          volume_kg: b.volume_kg,
+          sets: b.sets,
+          sessions: b.sessions,
+          avg_rpe: b.avg_rpe,
+          avg_rir: b.avg_rir,
+          fatigue_volume: volScore,
+          fatigue_intensity: heavyScore,
+          fatigue_total: volScore + heavyScore,
+        };
+      });
+
+      // ── Scatter data: individual sets with both rpe AND rir ────────────────
+      const scatter = fatigueRows
+        .filter((r) => r.rpe !== null && r.rpe !== undefined && r.rir !== null && r.rir !== undefined)
+        .map((r) => ({
+          rpe: r.rpe as number,
+          rir: r.rir as number,
+          volume: Math.round(r.volumeLoad),
+          week: isoWeekKey(r.workoutDate),
+          muscle: r.muscleGroup,
+        }));
+
+      return NextResponse.json({ blocks, scatter });
+    }
+
+
     const totalWorkouts = db
       .select({ count: sql<number>`count(*)` })
       .from(schema.workouts)
