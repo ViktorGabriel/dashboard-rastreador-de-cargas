@@ -1,8 +1,38 @@
-node_modules
-.next
-out
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+
+# Environment variables
 .env*.local
 .env
+
+# SQLite databases
 *.db*
+
+# TypeScript
 *.tsbuildinfo
-.agents
+next-env.d.ts
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# AI Agent files and instructions
+.agents/
+.agent/
+.claude/
+CLAUDE.md
+AGENTS.md
+docs/superpowers/
